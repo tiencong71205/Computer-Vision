@@ -2,8 +2,6 @@
 
 <p align="center">
 
-![Stars](https://img.shields.io/github/stars/yourusername/safevision-ai?style=for-the-badge)
-![Forks](https://img.shields.io/github/forks/yourusername/safevision-ai?style=for-the-badge)
 ![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
 
 ![Python](https://img.shields.io/badge/Python-3.9-blue?style=for-the-badge&logo=python)
