@@ -1,0 +1,124 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# config.yaml — Fire & Fall Detection Pipeline
+# ══════════════════════════════════════════════════════════════════════════════
+# Chỉnh file này để thay đổi tham số mà không cần sửa code.
+# Tất cả script đọc config qua:
+#   from src.utils.config import load_config
+#   cfg = load_config('config.yaml')
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+# ── Models ────────────────────────────────────────────────────────────────────
+models:
+  fire:
+    weights: models/fire_best.pt        # .pt cho PC,  .engine cho Jetson
+    onnx:    models/fire_best.onnx
+    engine:  models/fire.engine         # TensorRT (chỉ dùng trên Jetson)
+
+  pose:
+    weights: yolov8n-pose.pt            # auto-download nếu chưa có
+    onnx:    models/yolov8n-pose.onnx
+    engine:  models/pose.engine
+
+  lstm:
+    weights: models/fall_lstm_best.pt
+    onnx:    models/fall_lstm.onnx
+    engine:  models/lstm.engine
+    input_size: 34                      # 17 keypoints × 2 (x, y)
+    hidden:     64
+    n_layers:   2
+    dropout:    0.3
+
+
+# ── Inference ─────────────────────────────────────────────────────────────────
+inference:
+  device:   auto          # auto | cuda | cpu | 0 | 0,1
+  imgsz:    416           # Input size: 416 (nhanh) hoặc 640 (chính xác hơn)
+  backend:  pytorch       # pytorch | tensorrt  (tensorrt chỉ dùng trên Jetson)
+
+
+# ── Fire detection ────────────────────────────────────────────────────────────
+fire:
+  conf:      0.45          # Confidence threshold — tăng để giảm false alarm
+  iou:       0.40          # NMS IoU threshold
+  classes:                 # Chỉ detect các class này (null = detect tất cả)
+    - fire
+    - smoke
+
+
+# ── Fall detection ────────────────────────────────────────────────────────────
+fall:
+  # Pose
+  pose_conf: 0.30          # Confidence threshold cho người
+
+  # LSTM window
+  seq_len:   20            # Số frame mỗi cửa sổ LSTM
+  stride:    1             # Bước trượt cửa sổ (1 = mỗi frame cập nhật 1 lần)
+
+  # Confirmation — tránh false alarm
+  fall_confirm:  5         # Cần N frame liên tiếp LSTM nói "Fall" mới báo
+  fall_threshold: 0.50     # Probability threshold để coi là Fall
+
+  # Cooldown — tránh báo liên tục
+  cooldown_frames: 30      # Số frame nghỉ sau mỗi alert (~1s ở 30fps)
+
+
+# ── Alert ─────────────────────────────────────────────────────────────────────
+alert:
+  # Console
+  print_alerts: true       # In ra terminal khi có alert
+
+  # Lưu evidence
+  save_clips:   false      # Lưu clip ±N giây quanh thời điểm alert
+  clip_dir:     outputs/clips/
+  clip_seconds: 5          # Lưu 5 giây trước và sau
+
+  # MQTT (IoT / dashboard)
+  mqtt:
+    enabled:  false
+    broker:   192.168.1.100
+    port:     1883
+    topic_fire: safety/fire
+    topic_fall: safety/fall
+
+  # Webhook HTTP
+  webhook:
+    enabled: false
+    url:     http://localhost:8080/alert
+    timeout: 2             # seconds
+
+
+# ── Camera / Source ───────────────────────────────────────────────────────────
+source:
+  type:     webcam         # webcam | file | rtsp
+  id:       0              # webcam index hoặc path file video
+  # rtsp_url: rtsp://user:pass@192.168.1.50:554/stream   # uncomment nếu dùng IP cam
+  width:    640
+  height:   480
+  fps:      30
+
+
+# ── Output / Display ──────────────────────────────────────────────────────────
+output:
+  show_window:    true     # Hiển thị cửa sổ OpenCV
+  show_skeleton:  true     # Vẽ skeleton pose lên frame
+  show_fall_bar:  true     # Thanh Fall probability phía dưới
+  show_fps:       true
+
+  save_video:     false    # Lưu toàn bộ video output
+  save_dir:       outputs/
+  video_codec:    mp4v
+
+
+# ── Paths ─────────────────────────────────────────────────────────────────────
+paths:
+  models_dir:   models/
+  outputs_dir:  outputs/
+  logs_dir:     logs/
+
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+logging:
+  level:      INFO         # DEBUG | INFO | WARNING | ERROR
+  save_log:   false
+  log_file:   logs/run.log

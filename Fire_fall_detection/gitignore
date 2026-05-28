@@ -1,0 +1,154 @@
+# ══════════════════════════════════════════════════════
+# Python
+# ══════════════════════════════════════════════════════
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+*.spec
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# ══════════════════════════════════════════════════════
+# Model weights & checkpoints  ← không commit lên git
+# Dùng Git LFS hoặc GitHub Releases để share
+# ══════════════════════════════════════════════════════
+*.pt
+*.pth
+*.pkl
+*.h5
+*.hdf5
+*.pb
+*.tflite
+*.ckpt
+*.ckpt.index
+*.ckpt.data-*
+
+# ONNX & TensorRT
+*.onnx
+*.engine
+*.trt
+*.plan
+
+# ══════════════════════════════════════════════════════
+# Dataset & data files  ← không commit data thô
+# ══════════════════════════════════════════════════════
+datasets/
+data/raw/
+data/processed/
+*.npy
+*.npz
+*.csv
+*.json
+*.parquet
+*.feather
+*.tfrecord
+
+# Ảnh và video
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# Cache dataset (Ultralytics)
+*.cache
+
+# ══════════════════════════════════════════════════════
+# Training outputs
+# ══════════════════════════════════════════════════════
+runs/
+outputs/
+logs/
+wandb/
+mlruns/
+checkpoints/
+results/
+exp/
+
+# TensorBoard
+events.out.tfevents.*
+tensorboard_logs/
+
+# ══════════════════════════════════════════════════════
+# Jupyter Notebook
+# ══════════════════════════════════════════════════════
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+# Xoá output của notebook trước khi commit
+# (dùng: jupyter nbconvert --clear-output --inplace *.ipynb)
+
+# ══════════════════════════════════════════════════════
+# IDE & editor
+# ══════════════════════════════════════════════════════
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ══════════════════════════════════════════════════════
+# OS
+# ══════════════════════════════════════════════════════
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+# ══════════════════════════════════════════════════════
+# Secrets & credentials  ← tuyệt đối không commit
+# ══════════════════════════════════════════════════════
+.env
+.env.*
+*.key
+*_secret*
+*credentials*
+kaggle.json
+service_account.json
+
+# ══════════════════════════════════════════════════════
+# Temp & misc
+# ══════════════════════════════════════════════════════
+*.log
+*.tmp
+*.bak
+*.orig
+.cache/
+tmp/
+temp/
+screenshot_*.jpg
+output_*.mp4
+
+# ══════════════════════════════════════════════════════
+# Exceptions — những file cần giữ lại
+# ══════════════════════════════════════════════════════
+
+# Giữ file placeholder trong models/
+!models/.gitkeep
+
+# Giữ config mẫu
+!config.yaml
+!config.example.yaml
+
+# Cho phép commit ảnh demo trong docs/
+!docs/images/*.png
+!docs/images/*.jpg
