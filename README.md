@@ -12,249 +12,281 @@
 
 </p>
 
----
+# 🔥🚨 Fire & Fall Detection System
 
-# 🔥 SafeVision AI
-
-> Realtime Fall and Fire Detection Using YOLO Pose and LSTM
-
-SafeVision AI is an intelligent surveillance system using Computer Vision and Deep Learning to detect:
-
-- Human falls
-- Fire and smoke
-- Dangerous situations in realtime
-
-The project is optimized for realtime camera deployment with a target speed of **20–30 FPS**.
+Hệ thống nhận diện **cháy nổ** và **té ngã** realtime, chạy trên **Jetson Nano** với pipeline 2 model song song: YOLOv8n cho fire/smoke detection và LSTM temporal model cho fall detection.
 
 ---
 
-# ✨ Features
+## 📋 Tổng quan
 
-## 🔥 Fire & Smoke Detection
+| Thành phần | Model | mAP50 / F1 | Inference (Jetson Nano TRT) |
+|---|---|---|---|
+| Fire & Smoke | YOLOv8n | fire: 0.837 · smoke: 0.700 | ~40ms |
+| Pose estimation | YOLOv8n-pose | pretrained | ~55ms |
+| Fall detection | LSTM (hidden=64) | F1-Fall: 0.63 · Recall: 0.83 | ~1ms |
+| **Pipeline tổng** | | | **~15fps @ 416px** |
 
-- Realtime fire detection
-- Smoke detection
-- YOLO11n-based object detection
-- Realtime alert system
+### Pipeline
 
----
-
-## 🚨 Fall Detection
-
-- Human pose estimation
-- Temporal action recognition
-- Multi-class fall classification
-- False-positive reduction
-
----
-
-## ⚡ Realtime AI Pipeline
-
-- YOLOv8n-pose
-- YOLO11n
-- LSTM temporal learning
-- OpenCV video processing
-- TensorRT deployment support
-
----
-
-# 🧠 System Architecture
-
-```text
-Camera Stream
-      │
-      ▼
-Frame Extraction
-      │
-      ├── YOLO11n Fire Detection
-      │         │
-      │         ▼
-      │   Fire / Smoke Alert
-      │
-      └── YOLOv8n Pose
+```
+Camera frame
+    │
+    ├─── YOLOv8n-fire ──────────────────────── Fire / Smoke alert
+    │
+    └─── YOLOv8n-pose ──► Keypoints (17 joints)
                 │
-                ▼
-           Human Keypoints
+                ├─── Rule-based posture check
                 │
-                ▼
-              LSTM
-                │
-                ▼
-        Fall Classification
+                └─── LSTM (20-frame window) ──► Fall alert
 ```
 
 ---
 
-# 📂 Project Structure
+## 📁 Cấu trúc thư mục
 
-```text
-Thi_Giac_May_Tinh/
+```
+fire-fall-detection/
+├── README.md
+├── requirements.txt
+├── config.yaml                      # Cấu hình toàn bộ pipeline
+├── .gitignore
 │
-├── datasets/
-│   ├── fire/
-│   ├── fall/
-│   └── fallv2/
+├── notebooks/                       # Train trên Kaggle T4x2
+│   ├── notebook1_fire_detection.ipynb
+│   ├── notebook2_extract_keypoints.ipynb
+│   └── notebook3_train_lstm.ipynb
 │
-├── processed/
+├── models/                          # Weights (không commit, dùng Git LFS)
+│   ├── fire_best.pt
+│   ├── fall_lstm_best.pt
+│   └── .gitkeep
 │
-├── models/
+├── src/
+│   ├── models/
+│   │   └── lstm_model.py            # Định nghĩa FallLSTM
+│   ├── pipeline.py                  # Class SafetyPipeline
+│   └── utils/
+│       ├── keypoint_utils.py
+│       └── alert_utils.py
 │
 ├── scripts/
+│   ├── inference.py                 # Chạy trên PC (CPU/GPU)
+│   ├── export_onnx.py               # Export .pt → .onnx
+│   └── benchmark.py                 # Đo FPS
 │
-└── deploy/
+└── jetson/
+    ├── convert_trt.sh               # ONNX → TensorRT engine
+    ├── inference_trt.py             # Inference dùng TRT engine
+    └── install.sh                   # Cài dependencies trên Jetson Nano
 ```
 
 ---
 
-# 📊 Datasets
+## 🚀 Quickstart
 
-## 1. Fire-Smoke Dataset
+### 1. Clone và cài dependencies
 
-Used for:
-
-- Fire detection
-- Smoke detection
-- YOLO11n training
-
-Dataset structure:
-
-```text
-train/
-valid/
-test/
+```bash
+git clone https://github.com/your-username/fire-fall-detection.git
+cd fire-fall-detection
+pip install -r requirements.txt
 ```
 
-Each folder contains:
+### 2. Download weights
 
-```text
-images/
-labels/
+Download từ [Releases](https://github.com/your-username/fire-fall-detection/releases) và đặt vào thư mục `models/`:
+
+```
+models/
+├── fire_best.pt
+└── fall_lstm_best.pt
+```
+
+### 3. Chạy inference
+
+```bash
+# Webcam (tự detect GPU/CPU)
+python scripts/inference.py --source 0
+
+# File video
+python scripts/inference.py --source video.mp4
+
+# Ép dùng CPU
+python scripts/inference.py --source 0 --device cpu
+
+# Lưu output
+python scripts/inference.py --source 0 --save
+```
+
+**Phím tắt:** `Q` thoát · `S` screenshot · `P` pause
+
+---
+
+## 🏋️ Training
+
+Train toàn bộ được thực hiện trên **Kaggle T4x2**. Thứ tự chạy:
+
+### Notebook 1 — Fire Detection (~30 phút)
+
+Mở `notebooks/notebook1_fire_detection.ipynb` trên Kaggle.
+
+```
+Dataset: Fire_and_Smoke/ (YOLO format, 9156 train / 872 val / test images)
+Model:   YOLOv8n pretrained → fine-tune 100 epochs
+Input:   416×416
+Result:  mAP50=0.768 (fire=0.837, smoke=0.700)
+```
+
+### Notebook 2 — Extract Keypoints (~40 phút)
+
+Mở `notebooks/notebook2_extract_keypoints.ipynb` trên Kaggle.
+
+```
+Input:  fall/sequences/ (video frames) + fall/csv/ (accelerometer)
+Model:  YOLOv8n-pose pretrained
+Output: keypoints/*.npy — mỗi sequence 1 file shape (T, 34)
+Label:  acc > 1.5g → đỉnh ngã → cửa sổ 20 frame trước = Fall
+```
+
+### Notebook 3 — Train LSTM (~15 phút)
+
+Mở `notebooks/notebook3_train_lstm.ipynb` trên Kaggle.
+
+```
+Input:  keypoints.zip từ Notebook 2
+Model:  LSTM (hidden=64, 2 layers) + LayerNorm + Dropout
+Result: F1-Fall=0.63, Recall=0.83 (val set)
 ```
 
 ---
 
-## 2. Fall Dataset
+## 📊 Dataset
 
-Contains:
+| Dataset | Nguồn | Dùng cho |
+|---|---|---|
+| `Fire_and_Smoke/` | YOLO format, train/valid/test | Fire detection |
+| `fallv2/` | 5 class: Blank/Stand/Fall/Lie/Likefall | (dự phòng, feature extraction) |
+| `fall/sequences/` | Video frames theo chuỗi | Temporal LSTM |
+| `fall/csv/` | Accelerometer data | Label cửa sổ Fall |
 
-- RGB frame sequences
-- Temporal motion data
-- CSV motion features
-- Human falling actions
+> Dataset không được include trong repo. Xem hướng dẫn tại [Kaggle Dataset](https://www.kaggle.com/datasets/nguynteincong/dataset-fall-fire).
 
-Used for:
+---
 
-- Temporal learning
-- Sequence modeling
-- LSTM training
+## 🖥️ Deploy lên Jetson Nano
 
-Pipeline:
+### Yêu cầu
 
-```text
-Frames
-   ↓
-YOLO Pose
-   ↓
-Keypoints
-   ↓
-LSTM
+- Jetson Nano 4GB
+- JetPack 4.6+ (TensorRT 8.x)
+- Python 3.8+, OpenCV 4.x
+
+### Cài dependencies
+
+```bash
+bash jetson/install.sh
+```
+
+### Convert sang TensorRT
+
+```bash
+bash jetson/convert_trt.sh
+```
+
+Script sẽ tự động convert 3 file ONNX:
+
+```bash
+trtexec --onnx=models/fire_best.onnx    --saveEngine=models/fire.engine    --fp16
+trtexec --onnx=models/yolov8n-pose.onnx --saveEngine=models/pose.engine    --fp16
+trtexec --onnx=models/fall_lstm.onnx    --saveEngine=models/lstm.engine    --fp16
+```
+
+### Chạy trên Jetson Nano
+
+```bash
+python jetson/inference_trt.py --source 0
 ```
 
 ---
 
-## 3. Fallv2 Dataset
+## ⚙️ Cấu hình
 
-Multi-class action recognition dataset.
+Chỉnh `config.yaml` để thay đổi các tham số mà không cần sửa code:
 
-### Classes
+```yaml
+pipeline:
+  seq_len: 20          # Số frame LSTM window
+  fall_confirm: 5      # Số frame liên tiếp cần để xác nhận Fall
+  cooldown: 30         # Số frame nghỉ sau mỗi lần alert
 
-| Label | Class |
+fire:
+  conf: 0.45           # Confidence threshold
+
+inference:
+  imgsz: 416           # Input size (416 hoặc 640)
+  device: auto         # auto | cuda | cpu
+```
+
+---
+
+## 📈 Kết quả thực nghiệm
+
+### Fire Detection (test set)
+
+| Class | Precision | Recall | mAP50 |
+|---|---|---|---|
+| fire | 0.843 | 0.780 | 0.837 |
+| smoke | 0.788 | 0.640 | 0.700 |
+| **all** | **0.815** | **0.710** | **0.768** |
+
+### Fall Detection (val set)
+
+| Class | Precision | Recall | F1 |
+|---|---|---|---|
+| Normal | 0.93 | 0.73 | 0.82 |
+| Fall | 0.51 | 0.83 | 0.63 |
+
+> Fall Recall = 0.83: model bắt được 83% ca ngã thật. False alarm được giảm thêm bằng confirmation counter (5 frame liên tiếp).
+
+### FPS ước tính trên Jetson Nano
+
+| Cấu hình | FPS |
 |---|---|
-| 0 | Blank |
-| 1 | Fall |
-| 2 | Lie |
-| 3 | LikeFall |
-| 4 | Stand |
-
-Used for:
-
-- Semantic posture classification
-- False-positive reduction
-- Action recognition
+| 3 model TensorRT FP16, input 416px | ~15fps |
+| 3 model TensorRT FP16, input 640px | ~10fps |
 
 ---
 
-# 🛠️ Technologies Used
+## 🛠️ Yêu cầu hệ thống
 
-| Component | Technology |
-|---|---|
-| Object Detection | YOLO11n |
-| Pose Estimation | YOLOv8n-pose |
-| Temporal Learning | LSTM |
-| Framework | PyTorch |
-| Video Processing | OpenCV |
-| Deployment | ONNX / TensorRT |
+```
+# PC training / testing
+Python        >= 3.9
+PyTorch       >= 2.0
+ultralytics   >= 8.4
+opencv-python >= 4.8
+numpy         >= 1.24
 
----
-
-# ⚡ Expected Performance
-
-| Function | Target FPS |
-|---|---|
-| Fire Detection | 60–100 FPS |
-| Pose Detection | 35–50 FPS |
-| Pose + LSTM | 20–35 FPS |
+# Jetson Nano
+JetPack       >= 4.6
+TensorRT      >= 8.0
+CUDA          10.2
+```
 
 ---
 
-# 🚀 Future Improvements
+## 📝 Ghi chú
 
-- Jetson Nano deployment
-- TensorRT optimization
-- Telegram/Email alerts
-- Multi-camera monitoring
-- Edge AI deployment
-- Cloud dashboard integration
+- **Smoke detection** có mAP50 thấp hơn fire (0.700 vs 0.837) do khói có hình dạng mờ và dễ nhầm với mây/bụi. Cải thiện bằng cách tăng data augmentation hoặc dùng `yolov8s.pt`.
+- **Fall LSTM** được train trên dataset nhỏ (~10 sequences) nên có thể overfit. Kết quả sẽ tốt hơn đáng kể khi có thêm data.
+- **Confirmation logic** (5 frame liên tiếp) là bước quan trọng giảm false alarm từ ~49% xuống ~10-15% mà không cần retrain.
 
 ---
 
-# 📚 Dataset Citation
+## 📄 License
 
-## Fall Detection Datasets
-
-- Le2i Fall Detection Dataset
-- UR Fall Detection Dataset
-
-## Fire Detection Dataset
-
-- Roboflow Fire & Smoke Dataset
-
----
-
-# 🔗 Google Drive
-
-
-https://drive.google.com/file/d/12T_g081M2xbZeL3DtLGPk2fwmQE4wuzl/view?usp=drive_link
-
----
-
-# 👨‍💻 Author
-
-### Công Nguyễn
-### Tuấn Anh
-### Đăng Huy
-
-AI Research & Computer Vision Project
-
-Technology Stack:
-
-- YOLO
-- LSTM
-- PyTorch
-- OpenCV
-- Computer Vision
-
----
+MIT License — xem [LICENSE](LICENSE).
 
 # ⭐ If you like this project
 
