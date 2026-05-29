@@ -88,14 +88,14 @@ fire-fall-detection/
 ### 1. Clone và cài dependencies
 
 ```bash
-git clone https://github.com/tiencong71205/fire-fall-detection.git
+git clone https://github.com/tiencong71205/Computer-Vision.git
 cd fire-fall-detection
 pip install -r requirements.txt
 ```
 
 ### 2. Download weights
 
-Download từ [Releases](https://github.com/tiencong71205/fire-fall-detection/releases) và đặt vào thư mục `models/`:
+Download từ [Releases](https://github.com/tiencong71205/Computer-Vision/releases) và đặt vào thư mục `models/`:
 
 ```
 models/
@@ -170,7 +170,6 @@ Result: F1-Fall=0.63, Recall=0.83 (val set)
 | `fall/sequences/` | Video frames theo chuỗi | Temporal LSTM |
 | `fall/csv/` | Accelerometer data | Label cửa sổ Fall |
 
-> Dataset không được include trong repo. Xem hướng dẫn tại [Kaggle Dataset](https://www.kaggle.com/datasets/nguynteincong/dataset-fall-fire).
 
 ---
 
